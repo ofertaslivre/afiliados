@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Painel de ofertas</title>
+<style>
+[hidden]{display:none!important}
+*{box-sizing:border-box;margin:0}
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#f1f3f2;color:#1c2321;line-height:1.45}
+button,input,select{font:inherit}
+button{cursor:pointer;border:1px solid #c9d1cd;background:#fff;padding:8px 14px;border-radius:6px}
+button:hover{background:#eef2f0}
+button.p{background:#14683f;border-color:#14683f;color:#fff;font-weight:600}
+button.p:hover{background:#0f5733}button:disabled{opacity:.5;cursor:default}
+button.perigo{color:#b3261e}
+:focus-visible{outline:3px solid #1a8a52;outline-offset:2px}
+#login{min-height:100vh;display:grid;place-content:center}
+#login form{background:#fff;padding:30px;border-radius:12px;display:grid;gap:12px;width:min(340px,92vw)}
+#login input,.cp input,.cp select{padding:9px 10px;border:1px solid #c9d1cd;border-radius:6px;width:100%}
+#erro{color:#b3261e;font-size:.9rem}
+header{background:#fff;display:flex;align-items:center;gap:16px;padding:12px 4%;position:sticky;top:0;z-index:5;box-shadow:0 1px 0 #dde3e0}
+header b{font-size:1.1rem;margin-right:auto}
+header a{color:#14683f}
+#status{font-size:.9rem;color:#6b7772}
+nav{display:flex;gap:6px;padding:12px 4% 0;overflow-x:auto}
+nav button{border-radius:6px 6px 0 0;border-bottom:0;white-space:nowrap}
+nav button.on{background:#14683f;color:#fff;border-color:#14683f}
+main{background:#fff;margin:0 4% 40px;padding:22px;border-radius:0 8px 8px 8px;min-height:50vh}
+main h2{font-size:1.3rem;margin-bottom:4px}
+main p.d{color:#6b7772;margin-bottom:14px;font-size:.92rem}
+.topo{display:grid;gap:10px;margin-bottom:16px;justify-items:start}
+.row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #e7ebe9}
+.th{width:48px;height:48px;border-radius:8px;flex:none;background-size:cover;background-position:center;background-color:#ddd}
+.tx{flex:1;min-width:0}.tx small{display:block;color:#6b7772}
+.bt{display:flex;gap:6px;flex-wrap:wrap}
+.bt button{padding:6px 10px}
+.vazio{color:#6b7772;padding:20px 0}
+.cp{display:grid;gap:4px;margin-bottom:12px;max-width:420px}
+.cp span{font-size:.9rem;font-weight:600}
+.cp input[type=color]{padding:2px;height:40px}
+.ck{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+.pv{max-width:120px;border-radius:8px;margin-top:4px}
+dialog{border:0;border-radius:12px;padding:22px;width:min(460px,94vw);max-height:92vh;overflow:auto}
+dialog::backdrop{background:#0006}
+dialog h3{margin-bottom:14px}
+.acoes{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+.temas{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;margin-top:6px}
+.tema{text-align:left;padding:14px;border-width:2px}
+.tema.on{border-color:#14683f;box-shadow:0 0 0 3px #14683f33}
+.tema i{display:inline-block;width:28px;height:28px;border-radius:50%;margin-right:6px;border:1px solid #0003}
+.tema b{display:block;margin-top:8px}.tema small{color:#6b7772}
+hr{border:0;border-top:1px solid #e7ebe9;margin:20px 0}
+a.lk{padding:6px 10px;border:1px solid #c9d1cd;border-radius:6px;text-decoration:none;color:inherit;background:#fff;text-align:center}
+input,select{font-size:16px}
+@media(max-width:700px){header{flex-wrap:wrap;gap:8px;padding:10px 4%}header b{flex-basis:100%}main{margin:0 2% 30px;padding:14px}.row{flex-wrap:wrap}.bt{width:100%}.bt button,.bt a{flex:1}dialog{padding:16px}.temas{grid-template-columns:1fr 1fr}button{min-height:40px}}
+.cp{max-width:560px}.cp textarea{padding:9px 10px;border:1px solid #c9d1cd;border-radius:6px;width:100%;font:inherit;min-height:90px;resize:vertical}
+button[data-busca]{margin-top:6px;justify-self:start}.bmsg{color:#6b7772;font-size:.85rem}ol.d{padding-left:20px;display:grid;gap:6px}
+</style>
+</head>
+<body>
+<div id="login"><form id="fl"><h1 style="font-size:1.3rem">Painel de ofertas</h1>
+  <input type="password" id="senha" placeholder="Senha do painel" autocomplete="current-password" aria-label="Senha">
+  <button class="p">Entrar</button><p id="erro"></p></form></div>
+<div id="app" hidden>
+  <header><b>Painel de ofertas</b><span id="status"></span><a href="/" target="_blank">Ver site</a><button class="p" id="salvar" disabled>Salvar alterações</button></header>
+  <nav id="abas"></nav><main id="tela"></main>
+</div>
+<dialog id="dlg"></dialog>
+<script>
+const $=id=>document.getElementById(id),brl=n=>Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ABAS=[['categorias','Categorias'],['carrossel','Carrossel'],['promo','Oferta relâmpago'],['s1','Seção 1 de ofertas'],['s2','Seção 2 de ofertas'],['grupo','Grupo e contatos'],['shopee','Shopee (API)'],['cores','Site e cores']];
+const TEMAS=[['verde','Verde','Tema atual','#0f3d2e','#1a8a52','#e6f4c8'],['preto','Preto','Black Friday','#000','#d99a00','#f5b800'],['vermelho','Vermelho','Natal','#7a0c14','#d01e27','#f5d9a0'],['amarelo','Amarelo','Queima de estoque','#ffd400','#e11d1d','#111']];
+let CFG,aba='categorias',senha=sessionStorage.getItem('senha')||'',dirty=false;
+
+async function api(url,o={}){
+  const r=await fetch(url,{...o,headers:{'content-type':'application/json','x-admin-senha':senha,...(o.headers||{})}});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401){sair();throw new Error('Senha incorreta')}
+  if(!r.ok)throw new Error(d.erro||'Erro inesperado');return d;
+}
+function sair(){senha='';sessionStorage.removeItem('senha');$('app').hidden=true;$('login').hidden=false}
+async function entrar(){
+  try{await api('/api/loja?check=1');CFG=await api('/api/loja');
+    CFG.loja||={nome:'MINHAS OFERTAS'};CFG.faixa||=['','',''];CFG.avisos??='';CFG.categorias||=[];CFG.carrossel||=[];CFG.ofertas||=[];CFG.grupo||={link:'',titulo:'',texto:'',aviso:''};CFG.secao1||={titulo:'Seção 1',ativa:true};CFG.secao2||={titulo:'Seção 2',ativa:true};CFG.promo||={ativa:false,nome:'Oferta relâmpago',texto:'',inicio:new Date().toISOString(),fim:new Date(Date.now()+7*864e5).toISOString()};CFG.tema||='verde';
+    sessionStorage.setItem('senha',senha);$('login').hidden=true;$('app').hidden=false;render()}
+  catch(e){$('erro').textContent=e.message}
+}
+$('fl').onsubmit=e=>{e.preventDefault();senha=$('senha').value;entrar()};
+if(senha)entrar();
+
+const sujo=()=>{dirty=true;$('salvar').disabled=false;$('status').textContent='Alterações não salvas'};
+$('salvar').onclick=async()=>{$('salvar').disabled=true;$('status').textContent='Salvando…';
+  try{await api('/api/loja',{method:'PUT',body:JSON.stringify(CFG)});dirty=false;$('status').textContent='Salvo. A loja já está atualizada.'}
+  catch(e){alert(e.message);$('salvar').disabled=false;$('status').textContent='Erro ao salvar'}};
+onbeforeunload=e=>{if(dirty){e.preventDefault();e.returnValue=''}};
+
+/* ---------- componentes ---------- */
+const bg=o=>o.foto?`background-image:url('${esc(o.foto)}')`:`background-color:${esc(o.cor||'#ddd')}`;
+function lista(el,arr,info,editar,{filtro=()=>true,extra=[]}={}){
+  el.innerHTML=arr.map((it,i)=>filtro(it)?`<div class="row"><div class="th" style="${bg(it)}"></div><div class="tx"><b>${esc(info(it).t)}</b><small>${esc(info(it).s)}</small></div>
+   <div class="bt">${extra.map(x=>`<button class="p" data-a="${x.a}" data-i="${i}">${x.l}</button>`).join('')}<button data-a="up" data-i="${i}" aria-label="Subir">↑</button><button data-a="dn" data-i="${i}" aria-label="Descer">↓</button><button data-a="ed" data-i="${i}">Editar</button><button class="perigo" data-a="del" data-i="${i}">Excluir</button></div></div>`:'').join('')||'<p class="vazio">Nada por aqui ainda.</p>';
+  el.onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=+b.dataset.i,a=b.dataset.a,x=extra.find(y=>y.a===a);
+    if(x)x.fn(arr[i]);
+    else if(a==='ed')editar(arr[i]);
+    else if(a==='del'){if(confirm('Excluir "'+info(arr[i]).t+'"?')){arr.splice(i,1);sujo();render()}}
+    else{let j=i;do{j+=a==='up'?-1:1}while(arr[j]&&!filtro(arr[j]));if(arr[j]){[arr[i],arr[j]]=[arr[j],arr[i]];sujo();render()}}};
+}
+function campo(c,v){
+  const val=v[c.k]??c.def??'';
+  if(c.t==='check')return `<label class="ck"><input type="checkbox" name="${c.k}" ${val?'checked':''}> ${c.l}</label>`;
+  let i;
+  if(c.t==='select')i=`<select name="${c.k}">${c.o.map(([a,b])=>`<option value="${esc(a)}" ${String(a)===String(val)?'selected':''}>${esc(b)}</option>`).join('')}</select>`;
+  else if(c.t==='dt')i=`<input name="${c.k}" type="datetime-local" value="${val?loc(val):''}">`;
+  else if(c.t==='shopee')i=`<input name="${c.k}" value="${esc(val)}" placeholder="Cole o link do produto na Shopee"><button type="button" data-busca="${c.k}">Buscar dados automaticamente</button><small class="bmsg"></small>`;
+  else if(c.t==='textarea')i=`<textarea name="${c.k}" rows="4">${esc(val)}</textarea>`;
+  else if(c.t==='img')i=`<input name="${c.k}" value="${esc(val)}" placeholder="Cole um link ou envie uma foto"><input type="file" accept="image/*" data-up="${c.k}"><img class="pv" alt="" ${val?`src="${esc(val)}"`:'hidden'}>`;
+  else i=`<input name="${c.k}" type="${c.t||'text'}" ${c.t==='number'?'step="0.01" min="0"':''} value="${esc(val)}">`;
+  return `<label class="cp"><span>${c.l}</span>${i}</label>`;
+}
+async function reduzir(f,max=700){const im=await createImageBitmap(f),k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.8)}
+function form(titulo,campos,v,ok){
+  const d=$('dlg'),extra={};
+  d.innerHTML=`<form id="ff"><h3>${titulo}</h3>${campos.map(c=>campo(c,v)).join('')}<div class="acoes"><button type="button" id="cx">Cancelar</button><button class="p">Salvar</button></div></form>`;
+  const E=()=>$('ff').elements;
+  const aplicar=()=>campos.forEach(c=>{if(c.se)E()[c.k].closest('label').hidden=E()[c.se[0]].value!==c.se[1]});
+  [...new Set(campos.filter(c=>c.se).map(c=>c.se[0]))].forEach(k=>E()[k].addEventListener('change',aplicar));aplicar();
+  d.querySelectorAll('[data-up]').forEach(f=>f.onchange=async()=>{if(!f.files[0])return;f.disabled=true;
+    try{const r=await api('/api/imagem',{method:'POST',body:JSON.stringify({dataUrl:await reduzir(f.files[0])})});d.querySelector(`[name=${f.dataset.up}]`).value=r.url;const pv=f.nextElementSibling;pv.src=r.url;pv.hidden=false}
+    catch(e){alert(e.message)}f.disabled=false});
+  d.querySelectorAll('[data-busca]').forEach(b=>b.onclick=async()=>{
+    const c=campos.find(x=>x.k===b.dataset.busca),url=E()[c.k].value.trim(),msg=b.nextElementSibling;
+    if(!url){msg.textContent='Cole o link primeiro.';return}
+    b.disabled=true;msg.textContent='Buscando…';
+    try{const r=await api('/api/shopee',{method:'POST',body:JSON.stringify({url})});
+      for(const [de,para] of Object.entries(c.map)){const el=E()[para];if(el&&r[de]!=null&&r[de]!=='')el.value=r[de]}
+      if(c.botao&&E().botao&&!E().botao.value)E().botao.value=c.botao;
+      const pv=d.querySelector('.pv');if(r.foto&&pv){pv.src=r.foto;pv.hidden=false}
+      extra.shopId=r.shopId;extra.itemId=r.itemId;msg.textContent='Dados preenchidos. Confira e ajuste se precisar. Vídeo você adiciona manualmente.'}
+    catch(e){msg.textContent=e.message}
+    b.disabled=false});
+  $('cx').onclick=()=>d.close();
+  $('ff').onsubmit=e=>{e.preventDefault();const o={};
+    for(const c of campos){const el=E()[c.k];o[c.k]=c.t==='check'?el.checked:c.t==='number'?(parseFloat(el.value)||0):c.t==='dt'?(el.value?new Date(el.value).toISOString():''):el.value.trim()}
+    const falta=campos.find(c=>c.req&&!o[c.k]);if(falta){alert('Preencha: '+falta.l);return}
+    Object.assign(o,extra);ok(o);d.close();sujo();render()};
+  d.showModal();
+}
+const novoId=()=>'x'+Date.now().toString(36);
+function abrir(arr,campos,titulo,item,base={},fx=o=>o){
+  form(titulo,campos,item||base,o=>{o=fx(o);item?Object.assign(item,o):arr.push({id:novoId(),...o})});
+}
+
+/* ---------- abas ---------- */
+const slug=t=>String(t).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+const LOJAS={shopee:{nome:'Shopee'},mercadolivre:{nome:'Mercado Livre'},magalu:{nome:'Magazine Luiza'},aliexpress:{nome:'AliExpress'},tiktokshop:{nome:'TikTok Shop'},kwaishop:{nome:'Kwai Shop'},outra:{nome:'Outra loja'}};
+let cliques={};
+const loc=iso=>{const d=new Date(iso),p=n=>String(n).padStart(2,'0');return isNaN(d)?'':`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`};
+const CAT=[{k:'nome',l:'Nome',req:1},{k:'foto',l:'Foto (opcional)',t:'img'},{k:'cor',l:'Cor (usada quando não há foto)',t:'color',def:'#14683f'}];
+const SLIDE=[{k:'sub',l:'Texto pequeno (acima)'},{k:'titulo',l:'Título grande',req:1},{k:'texto',l:'Frase'},{k:'botao',l:'Texto do botão'},
+  {k:'shopeeUrl',l:'Destacar um produto da Shopee? Cole o link e busque (preenche título, preço, foto e link de afiliado)',t:'shopee',map:{nome:'titulo',precoTxt:'texto',foto:'foto',link:'link'},botao:'VER NA SHOPEE'},
+  {k:'link',l:'Para onde o botão leva (#conteudo, #grupo ou seu link de afiliado https://)',def:'#conteudo'},{k:'foto',l:'Imagem de fundo (opcional)',t:'img'},
+  {k:'ativo',l:'Mostrar no carrossel',t:'check',def:true}];
+const ofertaCampos=()=>[
+  {k:'loja',l:'Loja',t:'select',o:Object.entries(LOJAS).map(([k,v])=>[k,v.nome]),def:'shopee'},
+  {k:'shopeeUrl',l:'Link do produto na Shopee (para buscar os dados automaticamente)',t:'shopee',se:['loja','shopee'],map:{nome:'nome',preco:'preco',foto:'foto',link:'link'}},
+  {k:'link',l:'Seu link de afiliado (é o que abre quando clicam em "Pegar oferta")',req:1},
+  {k:'nome',l:'Título da oferta',req:1},{k:'preco',l:'Preço atual (R$)',t:'number'},{k:'precoDe',l:'Preço antigo "de" (opcional, mostra o % de desconto)',t:'number'},
+  {k:'cupom',l:'Cupom (opcional)'},
+  {k:'cat',l:'Categoria',t:'select',o:[['','Sem categoria'],...CFG.categorias.map(c=>[c.id,c.nome])]},
+  {k:'secao',l:'Em qual seção aparece',t:'select',o:[[1,'Seção 1: '+CFG.secao1.titulo],[2,'Seção 2: '+CFG.secao2.titulo]]},
+  {k:'foto',l:'Foto',t:'img'},{k:'video',l:'Vídeo (link do YouTube ou arquivo .mp4, opcional)'},
+  {k:'validade',l:'Válida até (opcional; depois disso a oferta some sozinha)',t:'dt'},
+  {k:'auto',l:'Atualizar o preço automaticamente todo dia (só Shopee e só com as chaves da API)',t:'check',se:['loja','shopee'],def:false},
+  {k:'ativo',l:'Visível no site',t:'check',def:true}];
+const catNome=id=>(CFG.categorias.find(c=>c.id===id)||{nome:'Sem categoria'}).nome;
+const msgOferta=(o,link)=>'🔥 *'+o.nome+'*\n'+(o.preco>0?(o.precoDe>o.preco?'De ~'+brl(o.precoDe)+'~ por *'+brl(o.preco)+'*':'Por *'+brl(o.preco)+'*')+'\n':'')+(o.cupom?'🏷️ Cupom: *'+o.cupom+'*\n':'')+'\n👉 '+link+'\n_Preço e estoque podem mudar._';
+const linkOferta=o=>location.origin+'/o/'+encodeURIComponent(o.id);
+async function enviarGrupo(o){
+  if(dirty){alert('Salve as alterações antes de enviar, para o link da oferta já funcionar.');return}
+  const txt=msgOferta(o,linkOferta(o));
+  try{if(navigator.canShare&&o.foto){const r=await fetch(o.foto);if(r.ok){const b=await r.blob(),f=new File([b],'oferta.jpg',{type:b.type||'image/jpeg'});
+    if(navigator.canShare({files:[f]})){await navigator.share({files:[f],text:txt,title:o.nome});return}}}}catch(e){if(e.name==='AbortError')return}
+  window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank','noopener')||(location.href='https://wa.me/?text='+encodeURIComponent(txt));
+}
+async function copiarTexto(o){
+  if(dirty){alert('Salve as alterações antes de copiar, para o link da oferta já funcionar.');return}
+  const t=msgOferta(o,linkOferta(o));try{await navigator.clipboard.writeText(t);alert('Texto copiado. Cole no grupo.')}catch(e){prompt('Copie o texto:',t)}
+}
+function inline(T,obj,campos,depois){
+  const box=document.createElement('div');box.innerHTML=campos.map(c=>campo(c,obj)).join('');T.append(box);
+  campos.forEach(c=>{const el=box.querySelector(`[name="${c.k}"]`);
+    el.oninput=el.onchange=()=>{obj[c.k]=c.t==='check'?el.checked:el.value;sujo();depois&&depois(c.k)}});
+}
+
+function render(){
+  $('abas').innerHTML=ABAS.map(([k,n])=>`<button data-k="${k}" class="${k===aba?'on':''}">${n}</button>`).join('');
+  $('abas').onclick=e=>{const b=e.target.closest('button');if(b){aba=b.dataset.k;render()}};
+  const T=$('tela');
+  if(aba==='categorias'){
+    T.innerHTML=`<div class="topo"><h2>Categorias</h2><p class="d">Aparecem no menu, na fileira de círculos e nos atalhos ao lado do carrossel (as 6 primeiras). Use as setas para mudar a ordem.</p><button class="p" id="novo">+ Nova categoria</button></div><div id="ls"></div>`;
+    $('novo').onclick=()=>abrir(CFG.categorias,CAT,'Nova categoria');
+    lista($('ls'),CFG.categorias,c=>({t:c.nome,s:CFG.ofertas.filter(p=>p.cat===c.id).length+' produto(s)'}),c=>abrir(CFG.categorias,CAT,'Editar categoria',c));
+  }else if(aba==='carrossel'){
+    T.innerHTML=`<div class="topo"><h2>Carrossel</h2><p class="d">Banners grandes no topo da loja. Para destacar um produto da Shopee, cole o link no cadastro do banner e clique em buscar.</p><button class="p" id="novo">+ Novo banner</button></div><div id="ls"></div>`;
+    $('novo').onclick=()=>abrir(CFG.carrossel,SLIDE,'Novo banner');
+    lista($('ls'),CFG.carrossel,s=>({t:s.titulo,s:(s.ativo===false?'Oculto · ':'')+(s.shopeeUrl?'Shopee · ':'')+(s.sub||'')}),s=>abrir(CFG.carrossel,SLIDE,'Editar banner',s));
+  }else if(aba==='promo'){
+    const P=CFG.promo;
+    const st=()=>{const a=Date.now(),i=new Date(P.inicio),f=new Date(P.fim);$('pst').textContent=!P.ativa?'Desligado.':a<i?'Ainda não começou.':a>=f?'Já terminou. Defina novas datas para reativar.':'No ar agora.'};
+    T.innerHTML=`<h2>Oferta relâmpago</h2><p class="d">Banner com cronômetro no topo do site, para campanhas reais (Black Friday, Dia do Consumidor...). Ao chegar a data final ele some sozinho. Use só com prazo verdadeiro. Cada oferta também pode ter a sua própria validade no cadastro.</p>`;
+    inline(T,P,[{k:'ativa',l:'Banner ligado',t:'check'},{k:'nome',l:'Título do banner'},{k:'texto',l:'Frase complementar (opcional)'}],st);
+    T.insertAdjacentHTML('beforeend',`<label class="cp"><span>Começa em</span><input id="pi" type="datetime-local" value="${loc(P.inicio)}"></label><label class="cp"><span>Termina em</span><input id="pf" type="datetime-local" value="${loc(P.fim)}"></label><p id="pst" class="d"></p>`);
+    ['pi','pf'].forEach(id=>$(id).oninput=()=>{if($('pi').value)P.inicio=new Date($('pi').value).toISOString();if($('pf').value)P.fim=new Date($('pf').value).toISOString();sujo();st()});st();
+  }else if(aba==='s1'||aba==='s2'){
+    const n=aba==='s1'?1:2,S=CFG['secao'+n];
+    T.innerHTML=`<div class="topo"><h2>Seção ${n} de ofertas</h2><label class="cp"><span>Título da seção no site</span><input id="st" value="${esc(S.titulo)}"></label>
+     <label class="ck"><input type="checkbox" id="sa" ${S.ativa!==false?'checked':''}> Mostrar esta seção no site</label><button class="p" id="novo">+ Nova oferta</button>
+     <p class="d">Depois de salvar, use "Enviar ao grupo" em cada oferta: abre o WhatsApp para você escolher o grupo (com foto e preço, quando o celular permitir). Postar em grupo exige essa ação sua; o WhatsApp não tem como automatizar de graça.</p></div><div id="ls"></div>`;
+    $('st').oninput=()=>{S.titulo=$('st').value;sujo()};$('sa').onchange=()=>{S.ativa=$('sa').checked;sujo()};
+    const fx=o=>({...o,secao:+o.secao});
+    $('novo').onclick=()=>abrir(CFG.ofertas,ofertaCampos(),'Nova oferta',null,{secao:n},fx);
+    const lst=()=>lista($('ls'),CFG.ofertas,o=>({t:o.nome,s:[(LOJAS[o.loja]||LOJAS.outra).nome,o.preco>0?brl(o.preco):'sem preço',(cliques[o.id]||0)+' cliques',o.validade?(Date.parse(o.validade)<Date.now()?'EXPIRADA':'até '+new Date(o.validade).toLocaleDateString('pt-BR')):'',o.ativo===false?'oculta':''].filter(Boolean).join(' · ')}),o=>abrir(CFG.ofertas,ofertaCampos(),'Editar oferta',o,{},fx),{filtro:o=>+o.secao===n,extra:[{a:'zap',l:'Enviar ao grupo',fn:enviarGrupo},{a:'copy',l:'Copiar texto',fn:copiarTexto}]});
+    lst();api('/api/cliques').then(c=>{cliques=c;if(aba===('s'+n))lst()}).catch(()=>{});
+  }else if(aba==='grupo'){
+    const G=CFG.grupo;
+    T.innerHTML=`<h2>Grupo e contatos</h2><p class="d">Crie o grupo no WhatsApp, copie o link de convite (dados do grupo → Convidar via link) e cole abaixo. Quem se cadastrar no site é levado a esse link e entra por conta própria: o WhatsApp não permite adicionar pessoas sem a ação delas, e quem se cadastra autoriza receber as ofertas.</p>`;
+    inline(T,G,[{k:'link',l:'Link de convite do grupo (https://chat.whatsapp.com/...)'},{k:'titulo',l:'Título da seção no site'},{k:'texto',l:'Texto da seção',t:'textarea'},{k:'aviso',l:'Aviso de privacidade (abaixo do formulário)',t:'textarea'}]);
+    T.insertAdjacentHTML('beforeend',`<hr><h3>Pessoas cadastradas</h3><p id="cn" class="d">Carregando…</p><button id="csv" disabled>Baixar lista (CSV)</button><div id="ls"></div>`);
+    api('/api/contato').then(cs=>{if(aba!=='grupo')return;
+      $('cn').textContent=cs.length+' pessoa(s) cadastrada(s).';$('csv').disabled=!cs.length;
+      $('ls').innerHTML=cs.map(c=>`<div class="row"><div class="tx"><b>${esc(c.nome)}</b><small>${esc(c.tel)} · ${new Date(c.criado).toLocaleDateString('pt-BR')}${c.interesses&&c.interesses.length?' · '+esc(c.interesses.join(', ')):''}</small></div><div class="bt"><a class="lk" target="_blank" rel="noopener" href="https://wa.me/${esc(c.tel)}">WhatsApp</a><button class="perigo" data-tel="${esc(c.tel)}">Excluir</button></div></div>`).join('');
+      $('ls').onclick=async e=>{const b=e.target.closest('[data-tel]');if(!b||!confirm('Excluir este cadastro?'))return;try{await api('/api/contato?tel='+b.dataset.tel,{method:'DELETE'});b.closest('.row').remove()}catch(x){alert(x.message)}};
+      $('csv').onclick=()=>{const q=v=>'"'+String(v).replace(/"/g,'""')+'"';const t='\ufeffNome;WhatsApp;Interesses;Cadastro\n'+cs.map(c=>[c.nome,c.tel,(c.interesses||[]).join(', '),c.criado].map(q).join(';')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/csv;charset=utf-8'}));a.download='contatos.csv';a.click()};
+    }).catch(e=>{if($('cn'))$('cn').textContent=e.message});
+  }else if(aba==='shopee'){
+    T.innerHTML=`<h2>Shopee (afiliados)</h2><p class="d">Em cada oferta da Shopee e em cada banner existe um campo para colar o link da Shopee. Com as chaves da API de afiliados, o sistema preenche nome, preço, foto e link de afiliado sozinho e atualiza os preços todo dia. Sem as chaves (a Shopee nem sempre libera), tudo continua funcionando: você preenche à mão. A API não entrega vídeos nem várias fotos: o vídeo você coloca manualmente.</p>
+     <p id="sst" class="d">Verificando…</p><button class="p" id="satu" disabled>Atualizar preços agora</button><hr><h3>Como liberar a busca automática</h3>
+     <ol class="d"><li>No painel de afiliados da Shopee (affiliate.shopee.com.br), procure a seção <b>Open API</b> e copie o <b>App ID</b> e o <b>Secret</b>. Se a seção não aparecer, sua conta ainda não tem esse acesso.</li><li>No Netlify, crie as variáveis <b>SHOPEE_APP_ID</b> e <b>SHOPEE_SECRET</b>.</li><li>Refaça o deploy e volte aqui.</li></ol>`;
+    api('/api/shopee').then(r=>{if(aba!=='shopee')return;$('sst').textContent=r.configurado?'Chaves configuradas: a busca automática e a atualização diária estão ativas.':'Chaves não configuradas: preencha os produtos manualmente ou siga os passos abaixo.';$('satu').disabled=!r.configurado}).catch(()=>{});
+    $('satu').onclick=async()=>{if(dirty){alert('Salve as alterações antes de atualizar os preços.');return}$('satu').disabled=true;
+      try{const r=await api('/api/shopee-atualizar',{method:'POST'});CFG=await api('/api/loja');alert(r.atualizados+' de '+r.total+' preços atualizados.');render()}catch(e){alert(e.message);$('satu').disabled=false}};
+  }else{
+    T.innerHTML=`<h2>Site e cores</h2><p class="d">Escolha o tema de cores. Vale para o site inteiro depois de salvar.</p>`;
+    inline(T,CFG.loja,[{k:'nome',l:'Nome do site (aparece no topo)'}]);
+    const F={f0:CFG.faixa[0]||'',f1:CFG.faixa[1]||'',f2:CFG.faixa[2]||''},A={avisos:CFG.avisos};
+    T.insertAdjacentHTML('beforeend','<h3>Faixa do topo (formato: Título|texto)</h3>');
+    inline(T,F,[{k:'f0',l:'Item 1'},{k:'f1',l:'Item 2'},{k:'f2',l:'Item 3'}],()=>{CFG.faixa=[F.f0,F.f1,F.f2]});
+    T.insertAdjacentHTML('beforeend','<h3>Rodapé</h3>');
+    inline(T,A,[{k:'avisos',l:'Avisos (um por linha). Mantenha o aviso de links de afiliado.',t:'textarea'}],()=>{CFG.avisos=A.avisos});
+    T.insertAdjacentHTML('beforeend',`<hr><div class="temas">${TEMAS.map(t=>`<button class="tema ${CFG.tema===t[0]?'on':''}" data-t="${t[0]}"><i style="background:${t[3]}"></i><i style="background:${t[4]}"></i><i style="background:${t[5]}"></i><b>${t[1]}</b><small>${t[2]}</small></button>`).join('')}</div>`);
+    document.querySelector('.temas').onclick=e=>{const b=e.target.closest('[data-t]');if(b){CFG.tema=b.dataset.t;sujo();render()}};
+  }
+}
+</script>
+</body>
+</html>
